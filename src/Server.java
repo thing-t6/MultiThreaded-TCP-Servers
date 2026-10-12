@@ -1,16 +1,14 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
 
-class ServerRun implements Runnable {
+class ServerRunner implements Runnable {
 
     private ServerSocket serverSocket;
 
-    public ServerRun(int port) throws IOException{
+    public ServerRunner(int port) throws IOException{
         this.serverSocket = new ServerSocket(port);
         serverSocket.setSoTimeout(30000);
     }
@@ -23,11 +21,12 @@ class ServerRun implements Runnable {
                 System.out.println("-> Just connected to" + server.getRemoteSocketAddress());
                 server.setSoTimeout(30000);
                 try{
-                    DataInputStream inputStream = new DataInputStream(server.getInputStream());
+                    DataInputStream inputStream = new DataInputStream(new BufferedInputStream(server.getInputStream()));
                     DataOutputStream out = new DataOutputStream(server.getOutputStream());
                     while(true) {
                         String message = inputStream.readUTF();
                         System.out.println("-> Client: " + message);
+                        out.writeUTF("-> Server :Received the message" + server.getRemoteSocketAddress());
                     }
                 }catch (SocketTimeoutException e){
                     System.out.println("--- Client took to long to send a message. Closing connection ---");
@@ -47,7 +46,7 @@ class ServerRun implements Runnable {
 public class Server {
     public static void main(String[] args){
         try {
-            Thread thread = new Thread(new ServerRun(8080));
+            Thread thread = new Thread(new ServerRunner(8080));
             thread.start();
         }catch (IOException e){
             System.out.println("Could not start server");

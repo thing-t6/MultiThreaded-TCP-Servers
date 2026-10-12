@@ -1,0 +1,115 @@
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.net.URI;
+
+class ProxyWorker implements Runnable{
+    private final Socket clientSocket;
+    private final String targetHost;
+    private final int targetPort;
+
+    public ProxyWorker(Socket clientSocket, String targetHost, int targetPort){
+        this.clientSocket = clientSocket;
+        this.targetHost = targetHost;
+        this.targetPort = targetPort;
+    }
+
+    @Override
+    public void run() {
+        try(Socket targetSocket = new Socket(targetHost, targetPort)){
+            System.out.println("-> Connected to taget server for session");
+            Thread clientToTarget = new Thread(() -> pipe(clientSocket, targetSocket));
+            Thread targetToClient = new Thread(() -> pipe(targetSocket, clientSocket));
+
+            clientToTarget.start();
+            targetToClient.start();
+
+            clientToTarget.join();
+            targetToClient.join();
+
+
+        }catch (Exception e){
+            System.out.println("Session closed or error : " + e.getMessage());
+        }finally {
+            try{
+                clientSocket.close();
+            }catch (Exception e){
+                System.out.println("Client session terminated");
+            }
+        }
+    }
+
+
+    private void pipe(Socket from, Socket to){
+        try{
+            DataInputStream in = new DataInputStream(new BufferedInputStream(from.getInputStream()));
+            DataOutputStream out = new DataOutputStream(to.getOutputStream());
+
+            while (true) {
+                String message = in.readUTF();
+                out.writeUTF(message);
+            }
+        }catch (Exception ex){}
+    }
+}
+
+
+public class TcpProxy {
+    public static void main(String[] args){
+
+        int listenPort = -1;
+        String targetHost = null;
+        int targetPort = -1;
+        String origin = null;
+
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "--port":
+                    if (i + 1 < args.length) {
+                        listenPort = Integer.parseInt(args[i + 1]);
+                        i++;
+                    }
+                    break;
+                case "--origin":
+                    if (i + 1 < args.length) {
+                        origin = args[i + 1];
+                        i++;
+                    }
+                    break;
+            }
+        }
+
+        URI uri = URI.create(origin);
+
+        targetHost = uri.getHost();
+        targetPort = uri.getPort();
+
+
+        if (listenPort == -1 || origin == null || targetPort == -1 || targetHost == null) {
+            System.out.println("Usage: java CachingProxy --port <number> --origin <url>");
+            return;
+        }
+
+        System.out.println("Starting proxy on port:" + listenPort + " with origin " + origin);
+
+
+        System.out.println("--- Proxy started on port:" + listenPort + "\n" + "-> Forwarding to " +
+                targetHost + ":" + targetPort + " ---");
+
+        try(ServerSocket serverSocket = new ServerSocket(listenPort)){
+            serverSocket.setSoTimeout(30000);
+            Socket clientsocket = serverSocket.accept();
+            System.out.println("-> Client connected: " + clientsocket.getRemoteSocketAddress());
+            new Thread(new ProxyWorker(clientsocket, targetHost, targetPort)).start();
+
+        }catch (SocketTimeoutException e){
+            System.out.println("No client connected in 30 seconds ! Closing proxy server connection....");
+        }
+        catch (Exception ex){
+            System.out.println("Proxy server error: " + ex.getMessage());
+        }
+    }
+}
