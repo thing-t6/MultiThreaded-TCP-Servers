@@ -94,16 +94,15 @@ public class TcpProxy {
             }
         }
 
+        if (listenPort == -1 || origin == null) {
+            System.out.println("Usage: java CachingProxy --port <number> --origin <url>");
+            return;
+        }
+
         URI uri = URI.create(origin);
 
         targetHost = uri.getHost();
         targetPort = uri.getPort();
-
-
-        if (listenPort == -1 || origin == null || targetPort == -1 || targetHost == null) {
-            System.out.println("Usage: java CachingProxy --port <number> --origin <url>");
-            return;
-        }
 
         System.out.println("Starting proxy on port:" + listenPort + " with origin " + origin);
 
