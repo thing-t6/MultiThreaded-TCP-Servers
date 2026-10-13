@@ -1,20 +1,21 @@
-# tcp-proxy-server
+# MultiThreaded-TCP-Servers
 
-A lightweight, multi-threaded TCP proxy server written in Java. It listens on a specified local port, accepts client connections, and forwards traffic bi-directionally to a target origin host and port.
+A lightweight multi-threaded network utilities featuring a concurrent TCP server capable of handling multiple simultaneous clients and a robust multi-threaded TCP proxy server for traffic forwarding.
 
 ## Features
 
-- **Multi-threaded Architecture:** Handles client-to-target and target-to-client traffic streams concurrently using dedicated threads.
-- **CLI Argument Parsing:** Easily configure the listener port and target origin via command-line flags (`--port` and `--origin`).
-- **Timeout Protection:** Automatically closes the server socket if no client connects within a 30-second window.
-- **Structured Communication:** Utilizes Java DataInputStream/DataOutputStream and BufferedInputStream/BufferedOutputStream for reliable data transmission over TCP.
+- **Multi-threaded Architecture for Server and Proxy Server:** Handles multiple client-to-target and target-to-client traffic streams concurrently using dedicated worker threads.
+- **Structured Communication:** Utilizes Java InputStreamReader/OutputStreamWriter and BufferedInputStream/PrintWriter for reliable data transmission over TCP.
+- **Concurrent TCP Server:** Accepts and manages multiple simultaneous client sessions, handling data input/output safely.
+- **Connection Management:** Graceful handling of client disconnections, connection timeouts, and stream cleanup.
+- **Clean Logging:** Detailed console output tracking client connections, disconnections, and data transfers in real time.
 
 ## Code Structure
 ```text
 .
 ├── TcpProxy.java       # Main entry point, CLI parser, and ServerSocket listener, Nested Proxy Runnable worker handling bi-directional socket piping                     
-├── Server.java         # Backend target server
-└── Client.java         # Client application communicating through the proxy
+├── Server.java         # Backend target server utilizing multi-threaded architecture
+└── Client.java         # Client application to communicate through the proxy or communicate with server
 ```
 
 ## Prerequisites
@@ -28,5 +29,9 @@ A lightweight, multi-threaded TCP proxy server written in Java. It listens on a 
 Save the code as `TcpProxy.java` and compile it using the Java compiler:
 
 ```bash
+Javac Server.java
 javac TcpProxy.java
+javac Client.java
+java Server
 java CachingProxy --port <number> --origin <url>
+java Client
