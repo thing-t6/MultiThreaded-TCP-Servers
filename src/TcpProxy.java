@@ -59,9 +59,6 @@ class ProxyWorker implements Runnable{
         }finally {
             try {
                 from.close();
-            } catch (IOException e) {}
-
-            try {
                 to.close();
             } catch (IOException e) {}
         }
