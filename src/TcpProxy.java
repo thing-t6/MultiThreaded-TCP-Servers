@@ -20,30 +20,9 @@ class ProxyWorker implements Runnable{
     public void run() {
         try(Socket targetSocket = new Socket(targetHost, targetPort)){
             System.out.println("-> Connected to taget server for session");
-            Thread clientToTarget = new Thread(() -> {
-                try {
-                    pipe(clientSocket, targetSocket);
-                } catch (IOException e) {
-                    System.out.println("Connection closed for client : " + clientSocket.getRemoteSocketAddress() + " to target: " + targetSocket.getRemoteSocketAddress());
-                }finally {
-                    try {
-                        targetSocket.close();
-                        clientSocket.close();
-                    } catch (IOException e) {}
-                }
-            });
-            Thread targetToClient = new Thread(() -> {
-                try {
-                    pipe(targetSocket, clientSocket);
-                } catch (IOException e) {
-                    System.out.println("Connection closed for target : " + targetSocket.getRemoteSocketAddress() + " to client: " + clientSocket.getRemoteSocketAddress());
-                }finally {
-                    try {
-                        targetSocket.close();
-                        clientSocket.close();
-                    } catch (IOException e) {}
-                }
-            });
+            Thread clientToTarget = new Thread(() -> pipe(clientSocket, targetSocket));
+            Thread targetToClient = new Thread(() -> pipe(targetSocket, clientSocket));
+
             clientToTarget.start();
             targetToClient.start();
 
@@ -63,19 +42,28 @@ class ProxyWorker implements Runnable{
     }
 
 
-    private void pipe(Socket from, Socket to) throws IOException {
+    private void pipe(Socket from, Socket to) {
 
-        BufferedReader in = new BufferedReader(new InputStreamReader(from.getInputStream(), StandardCharsets.UTF_8));
-        PrintWriter out = new PrintWriter(new OutputStreamWriter(to.getOutputStream(), StandardCharsets.UTF_8), true);
-        String data;
-        while(true) {
-            if((data = in.readLine()) != null) {
-                System.out.println(data);
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(from.getInputStream(), StandardCharsets.UTF_8));
+            PrintWriter out = new PrintWriter(new OutputStreamWriter(to.getOutputStream(), StandardCharsets.UTF_8), true);
+            String data;
+
+            while((data = in.readLine()) != null){
                 out.println(data);
             }
-            else {
-                throw new IOException();
-            }
+            System.out.println(from.getRemoteSocketAddress() + " Disconnected");
+        }
+        catch (IOException e){
+            System.out.println("Connection error: " + e.getMessage());
+        }finally {
+            try {
+                from.close();
+            } catch (IOException e) {}
+
+            try {
+                to.close();
+            } catch (IOException e) {}
         }
     }
 }
